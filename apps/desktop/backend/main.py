@@ -11,7 +11,7 @@ if sys.platform == "win32":
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from routers.audit import router as audit_router
 from routers.remediation import router as remediation_router
@@ -33,12 +33,17 @@ app.add_middleware(
 app.include_router(audit_router)
 app.include_router(remediation_router)
 
-@app.get("/", response_class=FileResponse)
+@app.get("/")
 def serve_testing_page():
-    html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "pages", "index.html"))
-    if os.path.exists(html_path):
-        return FileResponse(html_path)
-    return FileResponse(os.path.abspath(os.path.join(os.path.dirname(__file__), "index.html")))
+    frontend_html = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "pages", "index.html"))
+    if os.path.exists(frontend_html):
+        return FileResponse(frontend_html)
+
+    backend_html = os.path.abspath(os.path.join(os.path.dirname(__file__), "index.html"))
+    if os.path.exists(backend_html):
+        return FileResponse(backend_html)
+
+    return RedirectResponse(url="/docs")
 
 @app.get("/health")
 def health_check():
