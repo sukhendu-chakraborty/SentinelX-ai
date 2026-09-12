@@ -186,26 +186,32 @@ async def execute_audit_pipeline(repo_url: str, branch: str) -> AsyncGenerator[d
     temp_dir = tempfile.mkdtemp(prefix="sentinelx_audit_")
 
     try:
-        yield {"event": "RECON_STARTED", "message": f"Cloning repository {repo_url} (branch: {branch})..."}
+        is_local_dir = os.path.isdir(repo_url)
+        if is_local_dir:
+            yield {"event": "RECON_STARTED", "message": f"Analyzing local project directory {repo_url}..."}
+            target_dir = repo_url
+        else:
+            yield {"event": "RECON_STARTED", "message": f"Cloning repository {repo_url} (branch: {branch})..."}
 
-        def _clone_repo():
-            env = os.environ.copy()
-            env["GIT_TERMINAL_PROMPT"] = "0"
-            res = subprocess.run(["git", "clone", "--depth", "1", "--branch", branch, repo_url, temp_dir], capture_output=True, text=True, errors="ignore", env=env)
-            if res.returncode != 0:
-                logger.info(f"Git clone with branch {branch} failed, trying default branch...")
-                subprocess.run(["git", "clone", "--depth", "1", repo_url, temp_dir], capture_output=True, text=True, errors="ignore", env=env)
+            def _clone_repo():
+                env = os.environ.copy()
+                env["GIT_TERMINAL_PROMPT"] = "0"
+                res = subprocess.run(["git", "clone", "--depth", "1", "--branch", branch, repo_url, temp_dir], capture_output=True, text=True, errors="ignore", env=env)
+                if res.returncode != 0:
+                    logger.info(f"Git clone with branch {branch} failed, trying default branch...")
+                    subprocess.run(["git", "clone", "--depth", "1", repo_url, temp_dir], capture_output=True, text=True, errors="ignore", env=env)
 
-        await asyncio.to_thread(_clone_repo)
+            await asyncio.to_thread(_clone_repo)
+            target_dir = temp_dir
 
-        tech_stack = await run_recon(temp_dir)
+        tech_stack = await run_recon(target_dir)
 
         yield {"event": "SCANNERS_RUNNING", "message": "Executing static code & dependency analysis tools..."}
 
         semgrep_results, gitleaks_results, trivy_results = await asyncio.gather(
-            run_semgrep(temp_dir),
-            run_gitleaks(temp_dir),
-            run_trivy(temp_dir)
+            run_semgrep(target_dir),
+            run_gitleaks(target_dir),
+            run_trivy(target_dir)
         )
 
         all_findings = []
@@ -221,7 +227,7 @@ async def execute_audit_pipeline(repo_url: str, branch: str) -> AsyncGenerator[d
         if not all_findings:
             heuristic_fallback_engaged = True
             yield {"event": "HEURISTIC_FALLBACK_ENGAGED", "data": "CLI missing or empty. Defaulting to internal heuristic regex scanner."}
-            heuristic_results = run_heuristic_scan(temp_dir)
+            heuristic_results = run_heuristic_scan(target_dir)
             for h in heuristic_results:
                 all_findings.append({"scanner_source": "heuristic", "data": h})
 
@@ -229,7 +235,7 @@ async def execute_audit_pipeline(repo_url: str, branch: str) -> AsyncGenerator[d
 
         yield {"event": "AI_TRIAGE_ACTIVE", "message": f"Running AI Triage on {total_raw} raw finding(s)..."}
 
-        verified_findings = await run_triage(all_findings, temp_dir)
+        verified_findings = await run_triage(all_findings, target_dir)
 
         # Generate attack probe records alongside findings
         telemetry_timeline: list[AttackProbeTelemetry] = []

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { fetchProjectDetails, fetchTestStatus, startProjectTest, TestSession, TestEvent, startRealAuditStream, startRealRemediationStream } from "@/services/testService";
 import { Project } from "@/types/github";
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -19,6 +19,7 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
   const [realPatches, setRealPatches] = useState<any[]>([]);
   const [realDevNotes, setRealDevNotes] = useState<any[]>([]);
   const [telemetryEvents, setTelemetryEvents] = useState<any[]>([]);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Initial load
   useEffect(() => {
@@ -36,6 +37,10 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
       { opacity: 0, y: 20 },
       { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power3.out" }
     );
+
+    return () => {
+      if (unsubscribeRef.current) unsubscribeRef.current();
+    };
   }, [projectId]);
 
   const addEvent = (msg: string, type: "info" | "success" | "error" | "warning", stage: number) => {
@@ -69,9 +74,10 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
       addEvent("Environment established. Connecting to AI Engine...", "success", 1);
 
       let currentFindings: any[] = [];
+      const repoUrl = project.htmlUrl || project.repositoryFullName || "https://github.com/SentinelX-ai/SentinelX-ai";
 
       startRealAuditStream(
-        project.htmlUrl,
+        repoUrl,
         project.defaultBranch || "main",
         (sseEvent: any) => {
           const type = sseEvent.event;
@@ -114,7 +120,7 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
           setSession(s => s ? { ...s, currentStage: 7, status: "RUNNING" } : null);
           addEvent("Blue Team initiating AI Patch Generation...", "info", 7);
           
-          startRealRemediationStream(currentFindings, project.htmlUrl, (remEvent: any) => {
+          startRealRemediationStream(currentFindings, repoUrl, (remEvent: any) => {
             const rType = remEvent.event;
             const rMsg = remEvent.message || rType;
             
@@ -152,7 +158,6 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
           });
         }
       );
-      
     } catch (err: any) {
       setError(err.message || "Failed to start machine.");
       addEvent(`System Error: ${err.message}`, "error", 0);
