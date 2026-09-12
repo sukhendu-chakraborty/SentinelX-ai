@@ -19,6 +19,7 @@ export interface Project {
   connectedAt: string;
   description?: string;
   htmlUrl?: string;
+  localPath?: string;
 }
 
 export interface GitHubRepository {

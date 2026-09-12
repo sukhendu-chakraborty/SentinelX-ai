@@ -1,6 +1,7 @@
 import { Project } from "@/types/github";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const PYTHON_API_URL = process.env.NEXT_PUBLIC_PYTHON_API_URL || "http://localhost:8000";
 
 export interface TestSession {
   id: string;
@@ -39,9 +40,6 @@ export async function fetchProjectDetails(projectId: string): Promise<Project | 
 }
 
 export async function startProjectTest(projectId: string): Promise<TestSession> {
-  // This endpoint DOES NOT exist in the backend currently.
-  // We will call it to let it naturally fail and return the real 404 error
-  // so the UI can gracefully reflect the actual state without lying.
   try {
     const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/test/start`, {
       method: "POST",
@@ -61,7 +59,6 @@ export async function startProjectTest(projectId: string): Promise<TestSession> 
 }
 
 export async function fetchTestStatus(projectId: string): Promise<TestSession | null> {
-  // This endpoint DOES NOT exist.
   try {
     const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/test/status`, {
       method: "GET",
@@ -74,4 +71,47 @@ export async function fetchTestStatus(projectId: string): Promise<TestSession | 
   } catch (error) {
     return null;
   }
+}
+
+export function subscribeToAuditEvents(
+  repoUrl: string,
+  branch: string = "main",
+  onEvent: (event: { event: string; message?: string; data?: any }) => void,
+  onError?: (err: any) => void
+): () => void {
+  const url = `${PYTHON_API_URL}/api/v1/audit/scan/stream?repo_url=${encodeURIComponent(repoUrl)}&branch=${encodeURIComponent(branch)}`;
+  const eventSource = new EventSource(url);
+
+  eventSource.onmessage = (e) => {
+    try {
+      const parsed = JSON.parse(e.data);
+      onEvent(parsed);
+    } catch (err) {
+      console.error("Error parsing SSE event:", err);
+    }
+  };
+
+  const handleCustomEvent = (eventName: string) => (e: MessageEvent) => {
+    try {
+      const parsed = JSON.parse(e.data);
+      onEvent({ ...parsed, event: eventName });
+    } catch (err) {
+      console.error(`Error parsing SSE ${eventName} event:`, err);
+    }
+  };
+
+  eventSource.addEventListener("RECON_STARTED", handleCustomEvent("RECON_STARTED"));
+  eventSource.addEventListener("SCANNERS_RUNNING", handleCustomEvent("SCANNERS_RUNNING"));
+  eventSource.addEventListener("HEURISTIC_FALLBACK_ENGAGED", handleCustomEvent("HEURISTIC_FALLBACK_ENGAGED"));
+  eventSource.addEventListener("AI_TRIAGE_ACTIVE", handleCustomEvent("AI_TRIAGE_ACTIVE"));
+  eventSource.addEventListener("REPORT_READY", handleCustomEvent("REPORT_READY"));
+
+  eventSource.onerror = (err) => {
+    if (onError) onError(err);
+    eventSource.close();
+  };
+
+  return () => {
+    eventSource.close();
+  };
 }

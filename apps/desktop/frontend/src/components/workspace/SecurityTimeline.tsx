@@ -75,7 +75,7 @@ export default function SecurityTimeline({
       </div>
 
       <div ref={ref} className="relative max-w-7xl mx-auto pb-20 mt-16">
-        {STAGES.slice(0, Math.max(1, currentStage)).map((item, index) => {
+        {STAGES.map((item, index) => {
           const isCompleted = currentStage > index + 1 || (currentStage === index + 1 && status === "COMPLETED");
           const isRunning = currentStage === index + 1 && status === "RUNNING";
           const isFailed = currentStage === index + 1 && status === "FAILED";

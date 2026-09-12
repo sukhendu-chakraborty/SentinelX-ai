@@ -17,14 +17,14 @@ const LaserEffects = ({ feed }: { feed: TestEvent[] }) => {
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-      {shots.map((shot) => {
+      {shots.map((shot, idx) => {
         // We guess side based on type or stage if not explicitly provided
         const isRed = shot.type === "error" || shot.stage === 5;
         const color = isRed ? "#FF5F56" : "#B7FF00";
 
         return (
           <motion.div
-            key={shot.id}
+            key={`${shot.id}-${idx}`}
             initial={{ left: isRed ? "-20%" : "120%" }}
             animate={{ left: isRed ? "120%" : "-20%" }}
             transition={{ duration: 0.45, ease: "linear" }}
@@ -98,12 +98,12 @@ export default function CyberBattlefield({
               </div>
             )}
             {/* Reverse the array visually since flex-col-reverse puts the first item at the bottom */}
-            {[...battleEvents].reverse().map((ev) => {
+            {[...battleEvents].reverse().map((ev, idx) => {
               const isRed = ev.type === "error" || ev.stage === 5;
               
               return (
                 <motion.div
-                  key={ev.id}
+                  key={`${ev.id}-${idx}`}
                   initial={{ opacity: 0, x: isRed ? -20 : 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0 }}

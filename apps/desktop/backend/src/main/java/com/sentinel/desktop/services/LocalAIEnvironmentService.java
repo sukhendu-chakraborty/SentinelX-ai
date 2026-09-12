@@ -25,8 +25,8 @@ public class LocalAIEnvironmentService {
 
     public LocalAIEnvironmentService() {
         org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(3000);
-        requestFactory.setReadTimeout(6000);
+        requestFactory.setConnectTimeout(5000);
+        requestFactory.setReadTimeout(30000); // Allow up to 30 seconds for local Ollama LLM cold-start
         this.restTemplate = new RestTemplate(requestFactory);
     }
 
