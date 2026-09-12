@@ -42,8 +42,15 @@ async def stream_remediation_patches(request: RemediationRequest):
             create_git_branch=request.create_git_branch,
             branch_name=request.branch_name
         ):
-            event_type = event.get("event", "message")
             data_str = json.dumps(event)
-            yield f"event: {event_type}\ndata: {data_str}\n\n"
+            yield f"data: {data_str}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

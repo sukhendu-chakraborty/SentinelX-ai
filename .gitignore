@@ -38,6 +38,7 @@ pnpm-debug.log*
 __pycache__/
 *.py[cod]
 *.pyo
+*.whl
 .pytest_cache/
 .venv/
 venv/

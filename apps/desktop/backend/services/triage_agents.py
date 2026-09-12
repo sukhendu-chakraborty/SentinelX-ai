@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import uuid
@@ -64,7 +65,7 @@ async def call_ollama_triage(prompt: str) -> str:
             data=data,
             headers={"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with urllib.request.urlopen(req, timeout=180) as response:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             return res_json.get("response", "")
@@ -188,10 +189,12 @@ async def execute_audit_pipeline(repo_url: str, branch: str) -> AsyncGenerator[d
         yield {"event": "RECON_STARTED", "message": f"Cloning repository {repo_url} (branch: {branch})..."}
 
         def _clone_repo():
-            res = subprocess.run(["git", "clone", "--depth", "1", "--branch", branch, repo_url, temp_dir], capture_output=True, text=True, errors="ignore")
+            env = os.environ.copy()
+            env["GIT_TERMINAL_PROMPT"] = "0"
+            res = subprocess.run(["git", "clone", "--depth", "1", "--branch", branch, repo_url, temp_dir], capture_output=True, text=True, errors="ignore", env=env)
             if res.returncode != 0:
                 logger.info(f"Git clone with branch {branch} failed, trying default branch...")
-                subprocess.run(["git", "clone", "--depth", "1", repo_url, temp_dir], capture_output=True, text=True, errors="ignore")
+                subprocess.run(["git", "clone", "--depth", "1", repo_url, temp_dir], capture_output=True, text=True, errors="ignore", env=env)
 
         await asyncio.to_thread(_clone_repo)
 

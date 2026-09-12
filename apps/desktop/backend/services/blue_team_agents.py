@@ -40,7 +40,7 @@ async def call_ollama_remediation(prompt: str) -> str:
             data=data,
             headers={"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=180) as response:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body, strict=False)
             return res_json.get("response", "")
@@ -102,7 +102,7 @@ async def generate_code_patch(finding: VulnerabilityFinding, repo_path: Optional
     fallback_used = False
     raw_response = ""
     try:
-        raw_response = await asyncio.wait_for(call_ollama_remediation(prompt), timeout=30.0)
+        raw_response = await asyncio.wait_for(call_ollama_remediation(prompt), timeout=180.0)
     except Exception as e:
         logger.warning(f"Ollama remediation call timed out or failed ({e}). Engaging rule-based fallback.")
         fallback_used = True

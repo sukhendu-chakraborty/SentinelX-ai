@@ -31,11 +31,18 @@ async def stream_security_audit(repo_url: str, branch: str = "main"):
     """
     async def event_generator():
         async for event in execute_audit_pipeline(repo_url, branch):
-            event_type = event.get("event", "message")
             data_str = json.dumps(event)
-            yield f"event: {event_type}\ndata: {data_str}\n\n"
+            yield f"data: {data_str}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @router.get("/latest-run", response_model=AuditExecutionSnapshot)
 async def get_latest_audit_run():

@@ -33,13 +33,21 @@ export default function SecurityTimeline({
   events,
   isStarting,
   error,
-  onStart
+  onStart,
+  realVulnerabilities = [],
+  realPatches = [],
+  realDevNotes = [],
+  telemetryEvents = []
 }: {
   session: TestSession | null;
   events: TestEvent[];
   isStarting: boolean;
   error: string | null;
   onStart: () => void;
+  realVulnerabilities?: any[];
+  realPatches?: any[];
+  realDevNotes?: any[];
+  telemetryEvents?: any[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,13 +165,32 @@ export default function SecurityTimeline({
                   {index === 4 && (
                     <div className="w-full max-w-4xl space-y-6">
                       <CyberBattlefield session={session} events={events} />
-                      <RedTeamVulnerabilitiesCard />
+                      <RedTeamVulnerabilitiesCard vulnerabilities={realVulnerabilities.length > 0 ? realVulnerabilities.map(v => ({
+                        id: v.id || String(Math.random()),
+                        title: v.title,
+                        cwe: v.cwe_id,
+                        severity: v.severity,
+                        filePath: v.file_path,
+                        line: v.line_number,
+                        snippet: v.raw_snippet,
+                        vector: "Verified Vulnerability"
+                      })) : []} />
                     </div>
                   )}
 
                   {index === 5 && (
                     <div className="w-full max-w-4xl">
-                      <BlueTeamDefenseCard />
+                      <BlueTeamDefenseCard patches={realPatches.length > 0 ? realPatches.map(p => ({
+                        id: p.finding_id,
+                        vulnTitle: p.file_path,
+                        filePath: p.file_path,
+                        cwe: p.cwe_id,
+                        originalSnippet: p.original_snippet,
+                        patchedCode: p.patched_snippet,
+                        syntaxValid: p.syntax_valid,
+                        appliedToDisk: p.applied_to_disk,
+                        diffSummary: p.git_diff
+                      })) : []} />
                     </div>
                   )}
 
@@ -187,7 +214,7 @@ export default function SecurityTimeline({
 
                   {index === 9 && (
                     <div className="w-full max-w-4xl">
-                      <ReportsDeveloperNotesCard />
+                      <ReportsDeveloperNotesCard notes={realDevNotes.length > 0 ? realDevNotes : []} />
                     </div>
                   )}
                   
@@ -220,3 +247,4 @@ export default function SecurityTimeline({
     </div>
   );
 }
+

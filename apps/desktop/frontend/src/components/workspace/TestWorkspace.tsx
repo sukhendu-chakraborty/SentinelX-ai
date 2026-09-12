@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchProjectDetails, fetchTestStatus, startProjectTest, TestSession, TestEvent } from "@/services/testService";
+import { fetchProjectDetails, fetchTestStatus, startProjectTest, TestSession, TestEvent, startRealAuditStream, startRealRemediationStream } from "@/services/testService";
 import { Project } from "@/types/github";
 import WorkspaceHeader from "./WorkspaceHeader";
 import SecurityTimeline from "./SecurityTimeline";
@@ -13,6 +13,12 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
   const [events, setEvents] = useState<TestEvent[]>([]);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Real AI Data State
+  const [realVulnerabilities, setRealVulnerabilities] = useState<any[]>([]);
+  const [realPatches, setRealPatches] = useState<any[]>([]);
+  const [realDevNotes, setRealDevNotes] = useState<any[]>([]);
+  const [telemetryEvents, setTelemetryEvents] = useState<any[]>([]);
 
   // Initial load
   useEffect(() => {
@@ -32,75 +38,124 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
     );
   }, [projectId]);
 
-  // Autonomous Stage Progression Loop
-  useEffect(() => {
-    if (!session || session.status !== "RUNNING") return;
-    if (session.currentStage >= 10) return;
-
-    const timer = setTimeout(() => {
-      const nextStage = session.currentStage + 1;
-      const ts = new Date().toTimeString().slice(0, 8);
-
-      const stageMessages: Record<number, { message: string; type: "info" | "success" | "error" | "warning" }> = {
-        2: { message: "Analyzing target repository codebase & dependency graph...", type: "info" },
-        3: { message: "Digital Twin replica sandbox containerized successfully.", type: "success" },
-        4: { message: "Multi-Agent Scanners deployed (Semgrep, Gitleaks, Trivy).", type: "info" },
-        5: { message: "Red Team: Exploiting SQL Injection payload on /api/v1/user", type: "error" },
-        6: { message: "Blue Team: Shielding endpoint with parameterized query filter.", type: "success" },
-        7: { message: "Red Team: Verifying CSRF token validation and session isolation.", type: "warning" },
-        8: { message: "Self-Healing Engine: Generating AST code patch for SQL binding.", type: "info" },
-        9: { message: "Patch Validation: AST syntax check passed. All unit tests green.", type: "success" },
-        10: { message: "Audit Complete: All vulnerabilities remediated. Digital Twin sandbox disengaged.", type: "success" },
-      };
-
-      const stageInfo = stageMessages[nextStage] || { message: `Executing stage ${nextStage}...`, type: "info" };
-
-      setEvents((prev) => [
-        ...prev,
-        {
-          id: `ev-${nextStage}-${Date.now()}`,
-          timestamp: ts,
-          stage: nextStage,
-          message: stageInfo.message,
-          type: stageInfo.type,
-        },
-      ]);
-
-      setSession((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          currentStage: nextStage,
-          status: nextStage >= 10 ? "COMPLETED" : "RUNNING",
-          message: stageInfo.message,
-        };
-      });
-    }, 2800);
-
-    return () => clearTimeout(timer);
-  }, [session]);
+  const addEvent = (msg: string, type: "info" | "success" | "error" | "warning", stage: number) => {
+    setEvents((prev) => [
+      ...prev,
+      {
+        id: `ev-${Date.now()}-${Math.random()}`,
+        timestamp: new Date().toTimeString().slice(0, 8),
+        stage,
+        message: msg,
+        type
+      },
+    ]);
+  };
 
   const handleStartMachine = async () => {
+    if (!project) return;
     setIsStarting(true);
     setError(null);
+    setEvents([]);
+    setRealVulnerabilities([]);
+    setRealPatches([]);
+    setRealDevNotes([]);
+    setTelemetryEvents([]);
     
-    const ts = new Date().toTimeString().slice(0, 8);
-    setEvents([{ id: `start-${Date.now()}`, timestamp: ts, stage: 0, message: "Initializing SentinelX environment...", type: "info" }]);
+    addEvent("Initializing SentinelX environment...", "info", 1);
     
     try {
       const newSession = await startProjectTest(projectId);
       setSession(newSession);
+      addEvent("Environment established. Connecting to AI Engine...", "success", 1);
+
+      let currentFindings: any[] = [];
+
+      startRealAuditStream(
+        project.htmlUrl,
+        project.defaultBranch || "main",
+        (sseEvent: any) => {
+          const type = sseEvent.event;
+          const msg = sseEvent.message || type;
+          
+          if (type === "RECON_STARTED") {
+            setSession(s => s ? { ...s, currentStage: 2, status: "RUNNING" } : null);
+            addEvent(msg, "info", 2);
+          } else if (type === "SCANNERS_RUNNING") {
+            setSession(s => s ? { ...s, currentStage: 4, status: "RUNNING" } : null);
+            addEvent(msg, "info", 4);
+          } else if (type === "AI_TRIAGE_ACTIVE") {
+            addEvent(msg, "info", 4);
+          } else if (type === "TELEMETRY_PROBE") {
+            setSession(s => s ? { ...s, currentStage: 5, status: "RUNNING" } : null);
+            setTelemetryEvents(prev => [...prev, sseEvent.data]);
+            const statusType = sseEvent.data.status === "EXPLOIT_VERIFIED" ? "error" : "warning";
+            addEvent(`Probe [${sseEvent.data.vector}] on ${sseEvent.data.target_endpoint}: ${sseEvent.data.status}`, statusType, 5);
+          } else if (type === "REPORT_READY") {
+            setSession(s => s ? { ...s, currentStage: 6, status: "RUNNING" } : null);
+            currentFindings = sseEvent.data.verified_vulnerabilities || [];
+            setRealVulnerabilities(currentFindings);
+            addEvent(`Audit Complete: ${currentFindings.length} vulnerabilities found. Handing off to Blue Team.`, "success", 6);
+          } else {
+             addEvent(msg, "info", session?.currentStage || 2);
+          }
+        },
+        (err) => {
+          setError("Audit stream disconnected.");
+          setSession(s => s ? { ...s, status: "FAILED" } : null);
+          addEvent("Error connecting to AI Audit Engine.", "error", session?.currentStage || 1);
+        },
+        () => {
+          if (currentFindings.length === 0) {
+            setSession(s => s ? { ...s, currentStage: 10, status: "COMPLETED" } : null);
+            addEvent("No vulnerabilities to remediate. Sandbox disengaged.", "success", 10);
+            return;
+          }
+          
+          setSession(s => s ? { ...s, currentStage: 7, status: "RUNNING" } : null);
+          addEvent("Blue Team initiating AI Patch Generation...", "info", 7);
+          
+          startRealRemediationStream(currentFindings, project.htmlUrl, (remEvent: any) => {
+            const rType = remEvent.event;
+            const rMsg = remEvent.message || rType;
+            
+            if (rType === "REMEDIATION_STARTED") {
+              addEvent(rMsg, "info", 7);
+            } else if (rType === "RULE_BASED_FALLBACK_ENGAGED") {
+              addEvent(remEvent.data, "warning", 8);
+            } else if (rType === "REMEDIATION_REPORT_READY") {
+              const patches = remEvent.data.patches || [];
+              setRealPatches(patches);
+              
+              const notes = patches.map((p: any) => ({
+                id: p.finding_id,
+                vulnTitle: p.file_path,
+                cwe: p.cwe_id,
+                filePath: p.file_path,
+                rootCause: p.developer_note?.root_cause || "N/A",
+                remediationApplied: p.developer_note?.remediation_applied || "N/A",
+                verificationSteps: p.developer_note?.verification_steps || "N/A",
+                status: p.syntax_valid ? "VERIFIED_IN_TWIN" : "FAILED"
+              }));
+              setRealDevNotes(notes);
+              
+              addEvent(`Patch Validation Complete. ${remEvent.data.total_successful}/${remEvent.data.total_attempted} patches generated successfully.`, "success", 9);
+              
+              setSession(s => s ? { ...s, currentStage: 10, status: "COMPLETED" } : null);
+              addEvent("All tasks complete. Digital Twin sandbox disengaged.", "success", 10);
+            } else {
+              addEvent(rMsg, "info", 8);
+            }
+          }).catch(err => {
+             setError("Remediation stream disconnected.");
+             setSession(s => s ? { ...s, status: "FAILED" } : null);
+             addEvent("Error connecting to AI Remediation Engine.", "error", 8);
+          });
+        }
+      );
       
-      setEvents(prev => [
-        ...prev, 
-        { id: `ok-${Date.now()}`, timestamp: new Date().toTimeString().slice(0, 8), stage: 0, message: "Environment established successfully.", type: "success" }
-      ]);
     } catch (err: any) {
       setError(err.message || "Failed to start machine.");
-      setEvents(prev => [
-        ...prev,
-        { id: `err-${Date.now()}`, timestamp: new Date().toTimeString().slice(0, 8), stage: 0, message: `System Error: ${err.message}`, type: "error" }
-      ]);
+      addEvent(`System Error: ${err.message}`, "error", 0);
       setSession({
         id: "err",
         projectId,
@@ -125,6 +180,10 @@ export default function TestWorkspace({ projectId }: { projectId: string }) {
           isStarting={isStarting}
           error={error}
           onStart={handleStartMachine}
+          realVulnerabilities={realVulnerabilities}
+          realPatches={realPatches}
+          realDevNotes={realDevNotes}
+          telemetryEvents={telemetryEvents}
         />
       </div>
     </div>
