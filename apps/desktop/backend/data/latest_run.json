@@ -1,17 +1,71 @@
 {
-  "session_id": "sess-9cd9ef8b",
-  "target_repo": "https://github.com/octocat/Hello-World",
-  "scanned_at": "2026-09-12T09:56:09.108104Z",
+  "session_id": "sess-c3ddc301",
+  "target_repo": "https://github.com/sukhendu-chakraborty/Mission-2038",
+  "scanned_at": "2026-09-12T19:42:20.077695Z",
   "summary": {
-    "total_probes": 7,
-    "blocked_or_safe": 7,
-    "verified_exploits": 0,
-    "security_score": 100
+    "total_probes": 12,
+    "blocked_or_safe": 6,
+    "verified_exploits": 6,
+    "security_score": 0
   },
   "telemetry_timeline": [
     {
+      "probe_id": "probe-v-1",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
+      "vector": "SQLi",
+      "target_endpoint": "/train_custom_yolo.py",
+      "action": "VERIFY_INPUT_SANITIZATION",
+      "status": "EXPLOIT_VERIFIED",
+      "side": "red"
+    },
+    {
+      "probe_id": "probe-v-2",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
+      "vector": "SQLi",
+      "target_endpoint": "/api\\routes\\videos.js",
+      "action": "VERIFY_INPUT_SANITIZATION",
+      "status": "EXPLOIT_VERIFIED",
+      "side": "red"
+    },
+    {
+      "probe_id": "probe-v-3",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
+      "vector": "SQLi",
+      "target_endpoint": "/app\\admin\\page.js",
+      "action": "VERIFY_INPUT_SANITIZATION",
+      "status": "EXPLOIT_VERIFIED",
+      "side": "red"
+    },
+    {
+      "probe_id": "probe-v-4",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
+      "vector": "SQLi",
+      "target_endpoint": "/app\\player\\coach\\page.js",
+      "action": "VERIFY_INPUT_SANITIZATION",
+      "status": "EXPLOIT_VERIFIED",
+      "side": "red"
+    },
+    {
+      "probe_id": "probe-v-5",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
+      "vector": "SQLi",
+      "target_endpoint": "/python\\train_custom_yolo.py",
+      "action": "VERIFY_INPUT_SANITIZATION",
+      "status": "EXPLOIT_VERIFIED",
+      "side": "red"
+    },
+    {
+      "probe_id": "probe-v-6",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
+      "vector": "SQLi",
+      "target_endpoint": "/P_03-main\\backend\\main.py",
+      "action": "VERIFY_INPUT_SANITIZATION",
+      "status": "EXPLOIT_VERIFIED",
+      "side": "red"
+    },
+    {
       "probe_id": "probe-c-1",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
       "vector": "IDOR",
       "target_endpoint": "/api/v1/user",
       "action": "FUZZ_PARAMETER",
@@ -20,7 +74,7 @@
     },
     {
       "probe_id": "probe-c-2",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
       "vector": "CSRF",
       "target_endpoint": "/api/v1/auth",
       "action": "CHECK_HEADER",
@@ -29,7 +83,7 @@
     },
     {
       "probe_id": "probe-c-3",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
       "vector": "DESERIALIZATION",
       "target_endpoint": "/api/v1/ping",
       "action": "FUZZ_PARAMETER",
@@ -38,7 +92,7 @@
     },
     {
       "probe_id": "probe-c-4",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
       "vector": "XSS",
       "target_endpoint": "/api/v1/upload",
       "action": "FUZZ_PARAMETER",
@@ -47,7 +101,7 @@
     },
     {
       "probe_id": "probe-c-5",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
       "vector": "CORS",
       "target_endpoint": "/api/v1/user",
       "action": "CHECK_HEADER",
@@ -55,17 +109,8 @@
       "side": "red"
     },
     {
-      "probe_id": "probe-c-6",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
-      "vector": "SQLi",
-      "target_endpoint": "/api/v1/auth",
-      "action": "FUZZ_PARAMETER",
-      "status": "SAFE",
-      "side": "red"
-    },
-    {
       "probe_id": "probe-c-7",
-      "timestamp": "2026-09-12T09:56:09.108104Z",
+      "timestamp": "2026-09-12T19:42:20.077695Z",
       "vector": "COMMAND_INJECTION",
       "target_endpoint": "/api/v1/ping",
       "action": "FUZZ_PARAMETER",
@@ -73,6 +118,79 @@
       "side": "red"
     }
   ],
-  "verified_vulnerabilities": [],
+  "verified_vulnerabilities": [
+    {
+      "id": "vuln-heuristic-1",
+      "scanner_source": "heuristic",
+      "title": "Possible SQL Injection",
+      "cwe_id": "CWE-20",
+      "severity": "CRITICAL",
+      "file_path": "train_custom_yolo.py",
+      "line_number": 139,
+      "raw_snippet": "    print(\" To activate these weights in your sports analytics server:\")\n    print(\" 1. Open your project .env file\")\n    print(f\" 2. Add or update the line: CUSTOM_YOLO_WEIGHTS={best_weights_path}\")\n    print(\"=\" * 68 + \"\\n\")\n\n    return results\n",
+      "root_cause_analysis": "Static analysis alert flagged by heuristic in train_custom_yolo.py.",
+      "is_true_positive": true
+    },
+    {
+      "id": "vuln-heuristic-2",
+      "scanner_source": "heuristic",
+      "title": "Possible SQL Injection",
+      "cwe_id": "CWE-20",
+      "severity": "CRITICAL",
+      "file_path": "api\\routes\\videos.js",
+      "line_number": 239,
+      "raw_snippet": "  } catch (err) {\n    console.error('Delete video error:', err);\n    res.status(500).json({ error: 'Failed to delete video: ' + err.message });\n  }\n});\n\n",
+      "root_cause_analysis": "Static analysis alert flagged by heuristic in videos.js.",
+      "is_true_positive": true
+    },
+    {
+      "id": "vuln-heuristic-3",
+      "scanner_source": "heuristic",
+      "title": "Possible SQL Injection",
+      "cwe_id": "CWE-20",
+      "severity": "CRITICAL",
+      "file_path": "app\\admin\\page.js",
+      "line_number": 21,
+      "raw_snippet": "      } : prev);\n    } catch (err) {\n      setError(\"Failed to delete video: \" + err.message);\n    }\n  };\n\n",
+      "root_cause_analysis": "Static analysis alert flagged by heuristic in page.js.",
+      "is_true_positive": true
+    },
+    {
+      "id": "vuln-heuristic-4",
+      "scanner_source": "heuristic",
+      "title": "Possible SQL Injection",
+      "cwe_id": "CWE-20",
+      "severity": "CRITICAL",
+      "file_path": "app\\player\\coach\\page.js",
+      "line_number": 46,
+      "raw_snippet": "    } catch (err) {\n      console.error(\"Failed to delete video:\", err);\n      setError(\"Failed to delete video: \" + err.message);\n    }\n  };\n\n",
+      "root_cause_analysis": "Static analysis alert flagged by heuristic in page.js.",
+      "is_true_positive": true
+    },
+    {
+      "id": "vuln-heuristic-5",
+      "scanner_source": "heuristic",
+      "title": "Possible SQL Injection",
+      "cwe_id": "CWE-20",
+      "severity": "CRITICAL",
+      "file_path": "python\\train_custom_yolo.py",
+      "line_number": 139,
+      "raw_snippet": "    print(\" To activate these weights in your sports analytics server:\")\n    print(\" 1. Open your project .env file\")\n    print(f\" 2. Add or update the line: CUSTOM_YOLO_WEIGHTS={best_weights_path}\")\n    print(\"=\" * 68 + \"\\n\")\n\n    return results\n",
+      "root_cause_analysis": "Static analysis alert flagged by heuristic in train_custom_yolo.py.",
+      "is_true_positive": true
+    },
+    {
+      "id": "vuln-heuristic-6",
+      "scanner_source": "heuristic",
+      "title": "Possible SQL Injection",
+      "cwe_id": "CWE-20",
+      "severity": "CRITICAL",
+      "file_path": "P_03-main\\backend\\main.py",
+      "line_number": 69,
+      "raw_snippet": "                os.remove(temp_path)\n            except Exception as e:\n                print(f\"[Warning] Could not delete temp file {temp_path}: {e}\")\n\n@app.post(\"/analyze/shooting\")\nasync def process_shooting(file: UploadFile = File(...), show_visuals: bool = Form(False)):\n",
+      "root_cause_analysis": "Static analysis alert flagged by heuristic in main.py.",
+      "is_true_positive": true
+    }
+  ],
   "heuristic_fallback_engaged": true
 }
